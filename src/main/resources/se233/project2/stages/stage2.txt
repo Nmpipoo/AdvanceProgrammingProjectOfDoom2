@@ -1,0 +1,5 @@
+# Stage 2 - Checkerboard
+SSSSSSSSSSSS
+N.N.N..N.N.N
+.N.N.BB.N.N.
+NNNNNNNNNNNN
