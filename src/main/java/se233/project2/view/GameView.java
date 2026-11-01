@@ -9,6 +9,7 @@ import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
+import javafx.scene.text.Text;
 import javafx.scene.text.TextAlignment;
 import se233.project2.model.Ball;
 import se233.project2.model.Effects;
@@ -34,11 +35,11 @@ import static se233.project2.model.GameWorld.WIDTH;
 // Draws everything onto a single Canvas.
 public class GameView extends Pane {
 
-    private static final Color HUD_COLOR = Color.web("#11131c");
-    private static final Color TEXT_COLOR = Color.web("#e8ecf4");
-    private static final Color ACCENT = Color.web("#ffb347");
-    private static final Color MUTED = Color.web("#8a93a8");
-    private static final Color BACKGROUND = Color.web("#161a2b");
+    // Menus, HUD and messages are plain: black text and 1 px frames on white, in the default font.
+    private static final Color PAPER = Color.WHITE;
+    private static final Color INK = Color.BLACK;
+    private static final String FONT = Font.getDefault().getFamily();
+    private static final double BOX_PADDING = 24;
     private static final Color BACKGROUND_DIM = Color.color(0.05, 0.06, 0.1, 0.6);
     private static final Color PIERCE_GLOW = Color.web("#ffb347", 0.55);
     private static final Color LASER_CAPSULE = Color.web("#ff5a4f");
@@ -54,6 +55,8 @@ public class GameView extends Pane {
     private final Canvas canvas = new Canvas(WIDTH, HEIGHT);
     private final GraphicsContext gc = canvas.getGraphicsContext2D();
     private final Sprites sprites;
+    // Used only to measure text so message boxes fit around it.
+    private final Text measure = new Text();
 
     // Throws GameException if a sprite sheet is missing or unreadable.
     public GameView() {
@@ -65,7 +68,7 @@ public class GameView extends Pane {
     }
 
     public void render(GameWorld world, int fps, int ups) {
-        gc.setFill(BACKGROUND);
+        gc.setFill(PAPER);
         gc.fillRect(0, 0, WIDTH, HEIGHT);
 
         switch (world.getState()) {
@@ -102,14 +105,12 @@ public class GameView extends Pane {
     private void drawMenu() {
         gc.setTextAlign(TextAlignment.CENTER);
         gc.setTextBaseline(VPos.CENTER);
-        gc.setFill(ACCENT);
-        gc.setFont(Font.font("Consolas", FontWeight.BOLD, 64));
+        gc.setFill(INK);
+        gc.setFont(font(64));
         gc.fillText("GAME", WIDTH / 2, HEIGHT / 2 - 80);
-        gc.setFill(TEXT_COLOR);
-        gc.setFont(Font.font("Consolas", 22));
+        gc.setFont(font(22));
         gc.fillText("Press ENTER to start", WIDTH / 2, HEIGHT / 2 + 10);
-        gc.setFill(MUTED);
-        gc.setFont(Font.font("Consolas", 16));
+        gc.setFont(font(16));
         gc.fillText("A/D or arrow keys: move   SPACE: launch   P: pause", WIDTH / 2, HEIGHT / 2 + 60);
         gc.fillText("Catch the red L capsule, then hold SPACE to fire lasers", WIDTH / 2, HEIGHT / 2 + 85);
     }
@@ -147,11 +148,7 @@ public class GameView extends Pane {
         drawEffects(world.getEffects());
 
         if (!world.getBall().isLaunched() && world.getState() == GameState.PLAYING) {
-            gc.setTextAlign(TextAlignment.CENTER);
-            gc.setTextBaseline(VPos.CENTER);
-            gc.setFill(MUTED);
-            gc.setFont(Font.font("Consolas", 16));
-            gc.fillText("SPACE to launch", WIDTH / 2, Paddle.Y - 60);
+            drawMessage(WIDTH / 2, Paddle.Y - 60, new String[]{"SPACE to launch"}, new double[]{16});
         }
     }
 
@@ -186,7 +183,7 @@ public class GameView extends Pane {
         gc.setFill(Color.WHITE);
         gc.setTextAlign(TextAlignment.CENTER);
         gc.setTextBaseline(VPos.CENTER);
-        gc.setFont(Font.font("Consolas", FontWeight.BOLD, 14));
+        gc.setFont(Font.font(FONT, FontWeight.BOLD, 14));
         gc.fillText("L", powerUp.getCenterX(), powerUp.getCenterY());
     }
 
@@ -229,7 +226,7 @@ public class GameView extends Pane {
         }
         gc.setTextAlign(TextAlignment.CENTER);
         gc.setTextBaseline(VPos.CENTER);
-        gc.setFont(Font.font("Consolas", FontWeight.BOLD, 16));
+        gc.setFont(Font.font(FONT, FontWeight.BOLD, 16));
         // White with a dark outline so it reads on top of the explosion.
         gc.setLineWidth(3);
         for (Effects.FloatingText text : effects.getTexts()) {
@@ -237,7 +234,7 @@ public class GameView extends Pane {
             double y = text.centerY() - 22;
             gc.setStroke(Color.color(0, 0, 0, 0.8 * alpha));
             gc.strokeText(text.text(), text.centerX(), y);
-            gc.setFill(TEXT_COLOR.deriveColor(0, 1, 1, alpha));
+            gc.setFill(Color.color(1, 1, 1, alpha));
             gc.fillText(text.text(), text.centerX(), y);
         }
     }
@@ -259,27 +256,26 @@ public class GameView extends Pane {
     }
 
     private void drawHud(GameWorld world) {
-        gc.setFill(HUD_COLOR);
+        gc.setFill(PAPER);
         gc.fillRect(0, 0, WIDTH, HUD_HEIGHT);
+        gc.setStroke(INK);
+        gc.setLineWidth(1);
+        gc.strokeLine(0, HUD_HEIGHT - 0.5, WIDTH, HUD_HEIGHT - 0.5);
         gc.setTextBaseline(VPos.CENTER);
-        gc.setFont(Font.font("Consolas", FontWeight.BOLD, 18));
-        gc.setFill(TEXT_COLOR);
+        gc.setFont(font(18));
+        gc.setFill(INK);
         gc.setTextAlign(TextAlignment.LEFT);
         gc.fillText("SCORE " + world.getScore(), 16, HUD_HEIGHT / 2);
         if (world.getCombo() >= 2) {
-            gc.setFill(ACCENT);
             gc.fillText("COMBO x" + world.getCombo(), 200, HUD_HEIGHT / 2);
-            gc.setFill(TEXT_COLOR);
         }
         gc.setTextAlign(TextAlignment.CENTER);
         gc.fillText("STAGE " + world.getStage() + "/" + world.getStageCount(), WIDTH / 2, HUD_HEIGHT / 2);
         Laser laser = world.getLaser();
         if (laser.isActive()) {
-            gc.setFill(LASER_CAPSULE);
             gc.fillText("LASER " + (int) Math.ceil(laser.getTimeLeft()) + "s", 590, HUD_HEIGHT / 2);
         }
         gc.setTextAlign(TextAlignment.RIGHT);
-        gc.setFill(ACCENT);
         gc.fillText("LIVES " + world.getLives(), WIDTH - 16, HUD_HEIGHT / 2);
     }
 
@@ -288,57 +284,85 @@ public class GameView extends Pane {
         if (world.getBannerTime() <= 0) {
             return;
         }
-        double alpha = Math.min(1, world.getBannerTime() / 0.5);
+        gc.setGlobalAlpha(Math.min(1, world.getBannerTime() / 0.5));
+        if (world.getBannerSubtitle().isEmpty()) {
+            drawMessage(WIDTH / 2, HEIGHT / 2 + 40, new String[]{world.getBanner()}, new double[]{40});
+        } else {
+            drawMessage(WIDTH / 2, HEIGHT / 2 + 55, new String[]{world.getBanner(), world.getBannerSubtitle()},
+                    new double[]{40, 22});
+        }
+        gc.setGlobalAlpha(1);
+    }
+
+    // Lines of text in a white box with a 1 px frame, centered on (centerX, centerY),
+    // so messages stay readable on top of the playfield.
+    private void drawMessage(double centerX, double centerY, String[] lines, double[] sizes) {
+        double width = 0;
+        double height = 0;
+        for (int i = 0; i < lines.length; i++) {
+            measure.setFont(font(sizes[i]));
+            measure.setText(lines[i]);
+            width = Math.max(width, measure.getLayoutBounds().getWidth());
+            height += sizes[i] * 1.5;
+        }
+        width += 2 * BOX_PADDING;
+        height += BOX_PADDING;
+        double x = Math.round(centerX - width / 2) + 0.5;
+        double y = Math.round(centerY - height / 2) + 0.5;
+        gc.setFill(PAPER);
+        gc.fillRect(x, y, width, height);
+        gc.setStroke(INK);
+        gc.setLineWidth(1);
+        gc.strokeRect(x, y, width, height);
+
+        gc.setFill(INK);
         gc.setTextAlign(TextAlignment.CENTER);
         gc.setTextBaseline(VPos.CENTER);
-        gc.setFill(TEXT_COLOR.deriveColor(0, 1, 1, alpha));
-        gc.setFont(Font.font("Consolas", FontWeight.BOLD, 40));
-        gc.fillText(world.getBanner(), WIDTH / 2, HEIGHT / 2 + 40);
-        if (!world.getBannerSubtitle().isEmpty()) {
-            gc.setFill(ACCENT.deriveColor(0, 1, 1, alpha));
-            gc.setFont(Font.font("Consolas", FontWeight.BOLD, 22));
-            gc.fillText(world.getBannerSubtitle(), WIDTH / 2, HEIGHT / 2 + 80);
+        double lineY = y + BOX_PADDING / 2;
+        for (int i = 0; i < lines.length; i++) {
+            gc.setFont(font(sizes[i]));
+            gc.fillText(lines[i], centerX, lineY + sizes[i] * 0.75);
+            lineY += sizes[i] * 1.5;
         }
+    }
+
+    private static Font font(double size) {
+        return Font.font(FONT, size);
     }
 
     private void drawUpgradeChoice(GameWorld world) {
         gc.setTextAlign(TextAlignment.CENTER);
         gc.setTextBaseline(VPos.CENTER);
-        gc.setFill(TEXT_COLOR);
-        gc.setFont(Font.font("Consolas", FontWeight.BOLD, 44));
+        gc.setFill(INK);
+        gc.setFont(font(44));
         gc.fillText("STAGE " + world.getStage() + " CLEAR", WIDTH / 2, 130);
-        gc.setFill(MUTED);
-        gc.setFont(Font.font("Consolas", 20));
+        gc.setFont(font(20));
         gc.fillText("Choose an upgrade", WIDTH / 2, 185);
 
         List<Upgrade> choices = world.getUpgradeChoices();
         double left = (WIDTH - choices.size() * CARD_WIDTH - (choices.size() - 1) * CARD_GAP) / 2;
+        gc.setStroke(INK);
         for (int i = 0; i < choices.size(); i++) {
             double x = left + i * (CARD_WIDTH + CARD_GAP);
+            // No colour, so the highlighted card gets a thicker frame.
             boolean selected = i == world.getSelectedChoice();
-            gc.setFill(HUD_COLOR);
-            gc.fillRect(x, CARD_TOP, CARD_WIDTH, CARD_HEIGHT);
-            gc.setStroke(selected ? ACCENT : MUTED);
             gc.setLineWidth(selected ? 3 : 1);
-            gc.strokeRect(x, CARD_TOP, CARD_WIDTH, CARD_HEIGHT);
+            gc.strokeRect(x + 0.5, CARD_TOP + 0.5, CARD_WIDTH, CARD_HEIGHT);
 
             double centerX = x + CARD_WIDTH / 2;
-            gc.setFill(selected ? ACCENT : MUTED);
-            gc.setFont(Font.font("Consolas", FontWeight.BOLD, 16));
+            gc.setFont(font(16));
             gc.fillText("[" + (i + 1) + "]", centerX, CARD_TOP + 24);
-            gc.setFill(TEXT_COLOR);
-            gc.setFont(Font.font("Consolas", FontWeight.BOLD, 20));
+            gc.setFont(font(20));
             gc.fillText(choices.get(i).getName(), centerX, CARD_TOP + 58);
-            gc.setFill(MUTED);
-            gc.setFont(Font.font("Consolas", 15));
+            gc.setFont(font(15));
             List<String> lines = wrap(choices.get(i).getDescription(), 22);
             for (int line = 0; line < lines.size(); line++) {
                 gc.fillText(lines.get(line), centerX, CARD_TOP + 95 + line * 20);
             }
         }
+        gc.setLineWidth(1);
 
-        gc.setFill(MUTED);
-        gc.setFont(Font.font("Consolas", 16));
+        gc.setFont(font(16));
         gc.fillText("Press 1-" + choices.size() + ", or LEFT/RIGHT then ENTER", WIDTH / 2, CARD_TOP + CARD_HEIGHT + 45);
         List<String> taken = world.getStats().getUpgradesTaken();
         if (!taken.isEmpty()) {
@@ -380,23 +404,14 @@ public class GameView extends Pane {
     }
 
     private void drawOverlay(String title, String hint) {
-        gc.setFill(Color.color(0, 0, 0, 0.55));
-        gc.fillRect(0, HUD_HEIGHT, WIDTH, HEIGHT - HUD_HEIGHT);
-        gc.setTextAlign(TextAlignment.CENTER);
-        gc.setTextBaseline(VPos.CENTER);
-        gc.setFill(TEXT_COLOR);
-        gc.setFont(Font.font("Consolas", FontWeight.BOLD, 48));
-        gc.fillText(title, WIDTH / 2, HEIGHT / 2 - 20);
-        gc.setFill(MUTED);
-        gc.setFont(Font.font("Consolas", 18));
-        gc.fillText(hint, WIDTH / 2, HEIGHT / 2 + 30);
+        drawMessage(WIDTH / 2, HEIGHT / 2, new String[]{title, hint}, new double[]{48, 18});
     }
 
     private void drawDebug(int fps, int ups) {
-        gc.setTextAlign(TextAlignment.RIGHT);
-        gc.setTextBaseline(VPos.BOTTOM);
-        gc.setFill(MUTED);
-        gc.setFont(Font.font("Consolas", 12));
-        gc.fillText("N: skip stage    " + fps + " FPS / " + ups + " UPS", WIDTH - 8, HEIGHT - 6);
+        String text = "N: skip stage    " + fps + " FPS / " + ups + " UPS";
+        measure.setFont(font(12));
+        measure.setText(text);
+        double width = measure.getLayoutBounds().getWidth() + 2 * BOX_PADDING;
+        drawMessage(WIDTH - 8 - width / 2, HEIGHT - 24, new String[]{text}, new double[]{12});
     }
 }
