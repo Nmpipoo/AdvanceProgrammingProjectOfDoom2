@@ -2,5 +2,4 @@
 # N normal, S strong (3 hits), B bonus, U unbreakable, . empty
 ............
 .NNNNNNNNNN.
-.NNNNBBNNNN.
-.NNNNNNNNNN.
+

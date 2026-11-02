@@ -46,7 +46,6 @@ class LivesTest {
         assertEquals(2, world.getLives());
         assertEquals(GameWorld.State.PLAYING, world.getState());
         assertFalse(world.getBall().isLaunched());
-        assertEquals("LIFE LOST", world.getBanner());
     }
 
     @Test

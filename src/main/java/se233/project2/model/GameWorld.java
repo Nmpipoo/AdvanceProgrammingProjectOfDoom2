@@ -31,7 +31,6 @@ public class GameWorld {
     public static final double WIDTH = 800;
     public static final double HEIGHT = 640;
     public static final double HUD_HEIGHT = 40;
-    public static final double BANNER_SECONDS = 1.5;
     public static final double EXPLOSION_SECONDS = 0.36;
     public static final double POPUP_SECONDS = 0.8;
     // Bonus bricks always drop the laser capsule; other bricks sometimes do.
@@ -61,8 +60,6 @@ public class GameWorld {
     private State state = State.MENU;
     private int stage;
     private boolean debugVisible;
-    private String bannerTitle = "";
-    private double bannerTime;
     private List<Upgrade> upgradeChoices = List.of();
     private int selectedChoice;
 
@@ -176,8 +173,6 @@ public class GameWorld {
     }
 
     private void updatePlay(double dt, InputHandler input) {
-        bannerTime = Math.max(0, bannerTime - dt);
-
         int direction = 0;
         if (input.isHeld(KeyCode.LEFT) || input.isHeld(KeyCode.A)) {
             direction--;
@@ -278,8 +273,6 @@ public class GameWorld {
         if (stats.lives <= 0) {
             logger.info("Game over on stage {} with score {}", stage, getScore());
             setState(State.GAME_OVER);
-        } else {
-            showBanner("LIFE LOST");
         }
     }
 
@@ -353,11 +346,6 @@ public class GameWorld {
         balls.get(0).followPaddle(paddle);
     }
 
-    private void showBanner(String title) {
-        bannerTitle = title;
-        bannerTime = BANNER_SECONDS;
-    }
-
     private void setState(State next) {
         logger.debug("State {} -> {}", state, next);
         state = next;
@@ -393,14 +381,6 @@ public class GameWorld {
 
     public boolean isDebugVisible() {
         return debugVisible;
-    }
-
-    public String getBanner() {
-        return bannerTitle;
-    }
-
-    public double getBannerTime() {
-        return bannerTime;
     }
 
     public List<Upgrade> getUpgradeChoices() {

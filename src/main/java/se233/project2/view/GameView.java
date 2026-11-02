@@ -64,7 +64,6 @@ public class GameView extends Pane {
             case MENU -> drawMenu();
             case PLAYING -> {
                 drawPlayfield(world);
-                drawBanner(world);
                 drawHud(world);
             }
             case PAUSED -> {
@@ -261,16 +260,6 @@ public class GameView extends Pane {
         }
         gc.setTextAlign(TextAlignment.RIGHT);
         gc.fillText("LIVES " + world.getLives(), WIDTH - 16, HUD_HEIGHT / 2);
-    }
-
-    // Short message in the middle of the screen ("LIFE LOST") that fades out.
-    private void drawBanner(GameWorld world) {
-        if (world.getBannerTime() <= 0) {
-            return;
-        }
-        gc.setGlobalAlpha(Math.min(1, world.getBannerTime() / 0.5));
-        drawMessage(WIDTH / 2, HEIGHT / 2 + 40, new String[]{world.getBanner()}, new double[]{40});
-        gc.setGlobalAlpha(1);
     }
 
     // Lines of text in a white box with a 1 px frame, centered on (centerX, centerY),
