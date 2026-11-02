@@ -19,20 +19,14 @@ public class Ball extends GameObject {
 
     private double vx;
     private double vy;
-    private final double speed;
+    private final double speed = DEFAULT_SPEED;
     private boolean launched;
-    private int pierceLeft;
     // Time since the last bounce; drives the ball's squash animation.
     private double sinceBounce = Double.MAX_VALUE;
     private boolean bouncedVertically;
 
     public Ball() {
-        this(DEFAULT_SPEED);
-    }
-
-    public Ball(double speed) {
         super(0, 0, RADIUS * 2, RADIUS * 2);
-        this.speed = speed;
     }
 
     public void followPaddle(Paddle paddle) {
@@ -69,35 +63,24 @@ public class Ball extends GameObject {
         return new Hits(hits, paddleHit);
     }
 
-    // A piercing ball smashes through breakable bricks and keeps going; otherwise it bounces off
-    // the overlapped brick nearest its center (so a seam between two bricks only breaks one).
+    // Bounces off the overlapped brick nearest the ball's center (so a seam between two bricks only breaks one).
     private void hitBricks(List<Brick> bricks, List<Brick> hits, boolean sideways) {
-        Brick brick;
-        while ((brick = closestOverlap(bricks)) != null) {
-            boolean pierce = brick.isBreakable() && pierceLeft > 0;
-            if (pierce) {
-                pierceLeft--;
-                brick.destroy();
-            } else {
-                if (sideways) {
-                    x = vx > 0 ? brick.getX() - width : brick.getX() + brick.getWidth();
-                    vx = -vx;
-                } else {
-                    y = vy > 0 ? brick.getY() - height : brick.getY() + brick.getHeight();
-                    vy = -vy;
-                }
-                markBounce(!sideways);
-                // A corner hit can touch the same brick on both axes; it still only takes one hit.
-                if (!hits.contains(brick)) {
-                    brick.hit();
-                }
-            }
-            if (!hits.contains(brick)) {
-                hits.add(brick);
-            }
-            if (!pierce) {
-                return;
-            }
+        Brick brick = closestOverlap(bricks);
+        if (brick == null) {
+            return;
+        }
+        if (sideways) {
+            x = vx > 0 ? brick.getX() - width : brick.getX() + brick.getWidth();
+            vx = -vx;
+        } else {
+            y = vy > 0 ? brick.getY() - height : brick.getY() + brick.getHeight();
+            vy = -vy;
+        }
+        markBounce(!sideways);
+        // A corner hit can touch the same brick on both axes; it still only takes one hit.
+        if (!hits.contains(brick)) {
+            brick.hit();
+            hits.add(brick);
         }
     }
 
@@ -154,14 +137,6 @@ public class Ball extends GameObject {
     // True if the last bounce was off a floor or ceiling (squash flat), false for a wall (squash thin).
     public boolean isBouncedVertically() {
         return bouncedVertically;
-    }
-
-    public int getPierceLeft() {
-        return pierceLeft;
-    }
-
-    public void setPierceLeft(int pierceLeft) {
-        this.pierceLeft = pierceLeft;
     }
 
     public boolean isLaunched() {

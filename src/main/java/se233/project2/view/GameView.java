@@ -36,7 +36,6 @@ public class GameView extends Pane {
     private static final String FONT = Font.getDefault().getFamily();
     private static final double BOX_PADDING = 24;
     private static final Color BACKGROUND_DIM = Color.color(0.05, 0.06, 0.1, 0.6);
-    private static final Color PIERCE_GLOW = Color.web("#ffb347", 0.55);
     private static final Color LASER_CAPSULE = Color.web("#ff5a4f");
     // Sprites are pixel art, drawn at 3x their size on the sheet.
     private static final double SCALE = 3;
@@ -126,9 +125,7 @@ public class GameView extends Pane {
 
         drawPaddle(world);
 
-        for (Ball ball : world.getBalls()) {
-            drawBall(ball);
-        }
+        drawBall(world.getBall());
 
         drawPopups(world.getPopups());
     }
@@ -190,11 +187,6 @@ public class GameView extends Pane {
         double[] squash = sprites.getBallBounce().frameAt(ball.getSinceBounce());
         double scaleX = ball.isBouncedVertically() ? squash[0] : squash[1];
         double scaleY = ball.isBouncedVertically() ? squash[1] : squash[0];
-        if (ball.getPierceLeft() > 0) {
-            // A ball that can still smash through bricks glows orange.
-            gc.setFill(PIERCE_GLOW);
-            gc.fillOval(ball.getX() - 4, ball.getY() - 4, ball.getWidth() + 8, ball.getHeight() + 8);
-        }
         drawCentered(sprites.getPaddleSheet(), sprites.getBall(), ball.getCenterX(), ball.getCenterY(),
                 SCALE * scaleX, SCALE * scaleY);
     }

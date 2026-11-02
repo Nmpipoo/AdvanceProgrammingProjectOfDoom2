@@ -18,10 +18,6 @@ public class PlayerStats {
     int combo;
     double paddleWidth = Paddle.DEFAULT_WIDTH;
     double paddleSpeed = Paddle.DEFAULT_SPEED;
-    double ballSpeed = Ball.DEFAULT_SPEED;
-    int extraBalls;
-    // Bricks the ball smashes straight through after each paddle hit.
-    int pierce;
     double scoreMultiplier = 1.0;
     final List<String> upgradesTaken = new ArrayList<>();
 

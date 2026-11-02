@@ -35,7 +35,7 @@ public class App extends Application {
         InputHandler input = new InputHandler();
 
         Scene scene = new Scene(view, GameWorld.WIDTH, GameWorld.HEIGHT);
-        stage.setTitle("Brick Rogue");
+        stage.setTitle("Not Arkanoid");
         stage.setScene(scene);
         stage.setResizable(false);
         stage.show();
@@ -63,7 +63,7 @@ public class App extends Application {
         };
         gameLoop.start();
         drawingLoop.start();
-        logger.info("Brick Rogue window opened");
+        logger.info("Arkanoid window opened");
     }
 
     @Override
@@ -74,6 +74,6 @@ public class App extends Application {
         if (gameLoop != null) {
             gameLoop.stop();
         }
-        logger.info("Brick Rogue closed");
+        logger.info("Arkanoid closed");
     }
 }

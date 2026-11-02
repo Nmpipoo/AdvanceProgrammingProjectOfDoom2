@@ -45,7 +45,6 @@ class UpgradesTest {
         assertEquals(2, world.getStage());
         assertEquals(List.of(choices.get(1).getName()), world.getStats().getUpgradesTaken());
         assertEquals(world.getStats().paddleWidth, world.getPaddle().getWidth(), 1e-9);
-        assertEquals(world.getStats().ballSpeed, world.getBall().getSpeed(), 1e-9);
     }
 
     @Test
@@ -88,65 +87,20 @@ class UpgradesTest {
     }
 
     @Test
-    void ballSpeedUpgradesChangeTheBallSpeed() {
-        Upgrade.SLOW_BALL.apply(stats);
-        assertEquals(Ball.DEFAULT_SPEED * 0.85, stats.ballSpeed, 1e-9);
-        PlayerStats fast = new PlayerStats();
-        Upgrade.FAST_BALL.apply(fast);
-        assertEquals(Ball.DEFAULT_SPEED * 1.15, fast.ballSpeed, 1e-9);
-        assertEquals(1.25, fast.scoreMultiplier, 1e-9);
-    }
-
-    @Test
-    void extraBallExtraLifePiercingAndScoreBoostApplyTheirEffects() {
-        Upgrade.EXTRA_BALL.apply(stats);
-        Upgrade.EXTRA_LIFE.apply(stats);
-        Upgrade.PIERCING_BALL.apply(stats);
+    void scoreBoostMakesBricksWorthHalfAsMuchAgain() {
         Upgrade.SCORE_BOOST.apply(stats);
-        assertEquals(1, stats.extraBalls);
-        assertEquals(PlayerStats.STARTING_LIVES + 1, stats.getLives());
-        assertEquals(2, stats.pierce);
         assertEquals(1.5, stats.scoreMultiplier, 1e-9);
+        assertEquals(75, stats.addBrickPoints(50));
     }
 
     @Test
-    void piercingBallSmashesThroughAStrongBrickWithoutBouncing() {
-        Paddle paddle = new Paddle();
-        Ball ball = new Ball();
-        Brick brick = new Brick(Brick.Type.STRONG, 300, 200);
-        ball.launch();
-        ball.setPierceLeft(1);
-        ball.x = brick.getCenterX() - Ball.RADIUS - 2;
-        ball.y = brick.getY() + brick.getHeight() + 5;
-        for (int i = 0; i < 600 && !brick.isDestroyed(); i++) {
-            ball.step(paddle, List.of(brick), GameLoop.STEP);
+    void pickingTheSameUpgradeAgainStacksWithNoCap() {
+        for (int i = 0; i < 3; i++) {
+            Upgrade.WIDE_PADDLE.apply(stats);
+            Upgrade.SCORE_BOOST.apply(stats);
         }
-        assertTrue(brick.isDestroyed(), "a 3-hit brick broke in one pass");
-        assertTrue(ball.getVy() < 0, "the ball kept flying up");
-        assertEquals(0, ball.getPierceLeft());
-    }
-
-    @Test
-    void everyUpgradeStopsAtItsCap() {
-        for (Upgrade upgrade : Upgrade.values()) {
-            PlayerStats fresh = new PlayerStats();
-            for (int i = 0; i < 50 && upgrade.canApply(fresh); i++) {
-                upgrade.apply(fresh);
-            }
-            assertFalse(upgrade.canApply(fresh), upgrade.getName() + " never reached its cap");
-        }
-    }
-
-    @Test
-    void maxedOutUpgradesAreNoLongerOffered() {
-        stats.paddleWidth = 200;
-        stats.extraBalls = 2;
-        Random random = new Random(3);
-        for (int i = 0; i < 30; i++) {
-            List<Upgrade> choices = Upgrade.roll(stats, random);
-            assertEquals(3, choices.size());
-            assertFalse(choices.contains(Upgrade.WIDE_PADDLE));
-            assertFalse(choices.contains(Upgrade.EXTRA_BALL));
-        }
+        assertEquals(Paddle.DEFAULT_WIDTH * 1.25 * 1.25 * 1.25, stats.paddleWidth, 1e-9);
+        assertEquals(2.5, stats.scoreMultiplier, 1e-9);
+        assertEquals(3, Upgrade.roll(new Random(1)).size(), "all upgrades are still offered");
     }
 }

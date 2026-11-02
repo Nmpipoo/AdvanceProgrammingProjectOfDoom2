@@ -86,15 +86,6 @@ public class Brick extends GameObject {
         return isDestroyed();
     }
 
-    // Breaks the brick outright, whatever its hit points (used by the piercing ball).
-    public boolean destroy() {
-        if (!isBreakable() || isDestroyed()) {
-            return false;
-        }
-        hitPoints = 0;
-        return true;
-    }
-
     public boolean isDestroyed() {
         return isBreakable() && hitPoints <= 0;
     }

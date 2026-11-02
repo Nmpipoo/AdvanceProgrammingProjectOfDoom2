@@ -69,28 +69,11 @@ class LivesTest {
     }
 
     @Test
-    void withExtraBallsOnlyLosingTheLastBallCostsALife() {
-        world.getStats().extraBalls = 1;
-        tap(KeyCode.SPACE);
-        assertEquals(2, world.getBalls().size());
-
-        world.getBalls().get(0).y = GameWorld.HEIGHT + 10;
-        world.update(GameLoop.STEP, input);
-        assertEquals(3, world.getLives());
-
-        world.getBalls().get(0).y = GameWorld.HEIGHT + 10;
-        world.update(GameLoop.STEP, input);
-        assertEquals(2, world.getLives());
-    }
-
-    @Test
     void livesCarryOverToTheNextStage() {
         dropBall();
         world.getBricks().forEach(brick -> brick.hit());
         world.update(GameLoop.STEP, input);
-        // Pick an upgrade that isn't Extra Life, so the count stays the same.
-        int pick = world.getUpgradeChoices().get(0) == Upgrade.EXTRA_LIFE ? 1 : 0;
-        input.click(GameWorld.cardLeft(pick, 3) + 10, GameWorld.CARD_TOP + 10);
+        input.click(GameWorld.cardLeft(0, 3) + 10, GameWorld.CARD_TOP + 10);
         world.update(GameLoop.STEP, input);
         assertEquals(2, world.getStage());
         assertEquals(2, world.getLives());

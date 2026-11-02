@@ -35,8 +35,6 @@ public class GameWorld {
     public static final double POPUP_SECONDS = 0.8;
     // Bonus bricks always drop the laser capsule; other bricks sometimes do.
     public static final double LASER_DROP_CHANCE = 0.06;
-    // Directions the extra balls launch in, after the main ball's.
-    private static final double[] EXTRA_BALL_ANGLES = {Math.toRadians(-30), 0};
 
     // Upgrade cards, centered in a row.
     public static final double CARD_WIDTH = 220;
@@ -52,7 +50,7 @@ public class GameWorld {
     private final Laser laser = new Laser();
     private final List<Laser.Capsule> capsules = new ArrayList<>();
     private final List<Popup> popups = new ArrayList<>();
-    private final List<Ball> balls = new ArrayList<>(List.of(new Ball()));
+    private Ball ball = new Ball();
     private List<Brick> bricks = new ArrayList<>();
     private Paddle paddle = new Paddle();
     private PlayerStats stats = new PlayerStats();
@@ -182,29 +180,26 @@ public class GameWorld {
         }
         paddle.move(direction, dt);
 
-        if (!balls.get(0).isLaunched()) {
-            balls.get(0).followPaddle(paddle);
+        if (!ball.isLaunched()) {
+            ball.followPaddle(paddle);
             if (input.consumePress(KeyCode.SPACE)) {
-                launchBalls();
+                ball.launch();
+                logger.debug("Player launched the ball at x={}", Math.round(ball.getCenterX()));
             }
         } else {
-            for (Ball ball : balls) {
-                Ball.Hits hits = ball.step(paddle, bricks, dt);
-                if (hits.paddle()) {
-                    stats.resetCombo();
-                    ball.setPierceLeft(stats.pierce);
-                    logger.debug("Ball hit paddle at offset {}", Math.round(ball.getCenterX() - paddle.getCenterX()));
-                }
-                hits.bricks().forEach(this::onBrickHit);
+            Ball.Hits hits = ball.step(paddle, bricks, dt);
+            if (hits.paddle()) {
+                stats.resetCombo();
+                logger.debug("Ball hit paddle at offset {}", Math.round(ball.getCenterX() - paddle.getCenterX()));
             }
-            balls.removeIf(ball -> ball.getY() > HEIGHT);
-            if (balls.isEmpty()) {
+            hits.bricks().forEach(this::onBrickHit);
+            if (ball.getY() > HEIGHT) {
                 loseLife();
             }
         }
 
         // Hold SPACE to fire while the laser is active (once the ball is in play).
-        boolean firing = balls.get(0).isLaunched() && input.isHeld(KeyCode.SPACE);
+        boolean firing = ball.isLaunched() && input.isHeld(KeyCode.SPACE);
         boolean wasActive = laser.isActive();
         laser.update(dt, paddle, firing, bricks).forEach(this::onBrickHit);
         if (wasActive && !laser.isActive()) {
@@ -222,7 +217,7 @@ public class GameWorld {
             return capsule.getY() > HEIGHT;
         });
 
-        balls.forEach(ball -> ball.tick(dt));
+        ball.tick(dt);
         bricks.forEach(brick -> brick.tick(dt));
         popups.replaceAll(p -> new Popup(p.text(), p.x(), p.y(), p.age() + dt, p.explosion()));
         popups.removeIf(p -> p.age() >= POPUP_SECONDS);
@@ -231,20 +226,6 @@ public class GameWorld {
         if (state == State.PLAYING && isStageCleared()) {
             onStageCleared();
         }
-    }
-
-    private void launchBalls() {
-        Ball first = balls.get(0);
-        first.launch();
-        first.setPierceLeft(stats.pierce);
-        for (int i = 0; i < stats.extraBalls; i++) {
-            Ball extra = new Ball(stats.ballSpeed);
-            extra.followPaddle(paddle);
-            extra.launch(EXTRA_BALL_ANGLES[i % EXTRA_BALL_ANGLES.length]);
-            extra.setPierceLeft(stats.pierce);
-            balls.add(extra);
-        }
-        logger.debug("Player launched {} ball(s) at x={}", balls.size(), Math.round(first.getCenterX()));
     }
 
     private void onBrickHit(Brick brick) {
@@ -286,13 +267,9 @@ public class GameWorld {
             setState(State.VICTORY);
             return;
         }
-        upgradeChoices = Upgrade.roll(stats, random);
+        upgradeChoices = Upgrade.roll(random);
         selectedChoice = -1;
-        if (upgradeChoices.isEmpty()) {
-            nextStage();
-        } else {
-            setState(State.CHOOSE_UPGRADE);
-        }
+        setState(State.CHOOSE_UPGRADE);
     }
 
     // Hovering a card highlights it; clicking one picks it.
@@ -339,11 +316,10 @@ public class GameWorld {
         setState(State.PLAYING);
     }
 
-    // Back to a single ball resting on the paddle.
+    // A new ball resting on the paddle.
     private void resetBalls() {
-        balls.clear();
-        balls.add(new Ball(stats.ballSpeed));
-        balls.get(0).followPaddle(paddle);
+        ball = new Ball();
+        ball.followPaddle(paddle);
     }
 
     private void setState(State next) {
@@ -407,13 +383,8 @@ public class GameWorld {
         return paddle;
     }
 
-    // The main ball (the one that rests on the paddle before launch).
     public Ball getBall() {
-        return balls.get(0);
-    }
-
-    public List<Ball> getBalls() {
-        return Collections.unmodifiableList(balls);
+        return ball;
     }
 
     public List<Brick> getBricks() {
