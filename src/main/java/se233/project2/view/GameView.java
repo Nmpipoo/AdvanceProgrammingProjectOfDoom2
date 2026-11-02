@@ -12,6 +12,7 @@ import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextAlignment;
 import se233.project2.model.Ball;
+import se233.project2.model.CardLayout;
 import se233.project2.model.Effects;
 import se233.project2.model.GameState;
 import se233.project2.model.GameWorld;
@@ -45,12 +46,6 @@ public class GameView extends Pane {
     private static final Color LASER_CAPSULE = Color.web("#ff5a4f");
     // Sprites are pixel art, drawn at 3x their size on the sheet.
     private static final double SCALE = 3;
-
-    // Upgrade choice cards.
-    private static final double CARD_WIDTH = 220;
-    private static final double CARD_HEIGHT = 150;
-    private static final double CARD_GAP = 30;
-    private static final double CARD_TOP = 240;
 
     private final Canvas canvas = new Canvas(WIDTH, HEIGHT);
     private final GraphicsContext gc = canvas.getGraphicsContext2D();
@@ -340,33 +335,32 @@ public class GameView extends Pane {
         gc.fillText("Choose an upgrade", WIDTH / 2, 185);
 
         List<Upgrade> choices = world.getUpgradeChoices();
-        double left = (WIDTH - choices.size() * CARD_WIDTH - (choices.size() - 1) * CARD_GAP) / 2;
         gc.setStroke(INK);
         for (int i = 0; i < choices.size(); i++) {
-            double x = left + i * (CARD_WIDTH + CARD_GAP);
+            double x = CardLayout.left(i, choices.size());
             // No colour, so the highlighted card gets a thicker frame.
             boolean selected = i == world.getSelectedChoice();
             gc.setLineWidth(selected ? 3 : 1);
-            gc.strokeRect(x + 0.5, CARD_TOP + 0.5, CARD_WIDTH, CARD_HEIGHT);
+            gc.strokeRect(x + 0.5, CardLayout.TOP + 0.5, CardLayout.WIDTH, CardLayout.HEIGHT);
 
-            double centerX = x + CARD_WIDTH / 2;
+            double centerX = x + CardLayout.WIDTH / 2;
             gc.setFont(font(16));
-            gc.fillText("[" + (i + 1) + "]", centerX, CARD_TOP + 24);
+            gc.fillText("[" + (i + 1) + "]", centerX, CardLayout.TOP + 24);
             gc.setFont(font(20));
-            gc.fillText(choices.get(i).getName(), centerX, CARD_TOP + 58);
+            gc.fillText(choices.get(i).getName(), centerX, CardLayout.TOP + 58);
             gc.setFont(font(15));
             List<String> lines = wrap(choices.get(i).getDescription(), 22);
             for (int line = 0; line < lines.size(); line++) {
-                gc.fillText(lines.get(line), centerX, CARD_TOP + 95 + line * 20);
+                gc.fillText(lines.get(line), centerX, CardLayout.TOP + 95 + line * 20);
             }
         }
         gc.setLineWidth(1);
 
         gc.setFont(font(16));
-        gc.fillText("Press 1-" + choices.size() + ", or LEFT/RIGHT then ENTER", WIDTH / 2, CARD_TOP + CARD_HEIGHT + 45);
+        gc.fillText("Click a card, or press 1-" + choices.size() + ", or LEFT/RIGHT then ENTER", WIDTH / 2, CardLayout.TOP + CardLayout.HEIGHT + 45);
         List<String> taken = world.getStats().getUpgradesTaken();
         if (!taken.isEmpty()) {
-            gc.fillText("Your upgrades: " + summarize(taken), WIDTH / 2, CARD_TOP + CARD_HEIGHT + 85);
+            gc.fillText("Your upgrades: " + summarize(taken), WIDTH / 2, CardLayout.TOP + CardLayout.HEIGHT + 85);
         }
     }
 

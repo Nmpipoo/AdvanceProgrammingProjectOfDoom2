@@ -1,5 +1,6 @@
 package se233.project2.model;
 
+import javafx.geometry.Point2D;
 import javafx.scene.input.KeyCode;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -269,6 +270,18 @@ public class GameWorld {
         }
         if (picked < 0 && (input.consumePress(KeyCode.ENTER) || input.consumePress(KeyCode.SPACE))) {
             picked = selectedChoice;
+        }
+        // Hovering a card highlights it; clicking one picks it.
+        Point2D mouse = input.consumeMouseMove();
+        if (mouse != null) {
+            int hovered = CardLayout.cardAt(mouse.getX(), mouse.getY(), count);
+            if (hovered >= 0) {
+                selectedChoice = hovered;
+            }
+        }
+        Point2D click = input.consumeClick();
+        if (picked < 0 && click != null) {
+            picked = CardLayout.cardAt(click.getX(), click.getY(), count);
         }
         if (picked >= 0) {
             Upgrade upgrade = upgradeChoices.get(picked);

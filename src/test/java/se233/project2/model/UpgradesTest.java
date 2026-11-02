@@ -51,6 +51,51 @@ class UpgradesTest {
         assertEquals(world.getStats().getBallSpeed(), world.getBall().getSpeed(), 1e-9);
     }
 
+    // A started game with its first stage just cleared, waiting for an upgrade pick.
+    private GameWorld worldAtUpgradeChoice(InputHandler input) {
+        GameWorld world = new GameWorld(List.of(new String[]{"N"}, new String[]{"N"}));
+        input.press(KeyCode.ENTER);
+        world.update(GameLoop.STEP, input);
+        input.release(KeyCode.ENTER);
+        world.getBricks().forEach(brick -> brick.hit());
+        world.update(GameLoop.STEP, input);
+        return world;
+    }
+
+    private static double cardCenterX(int index) {
+        return CardLayout.left(index, 3) + CardLayout.WIDTH / 2;
+    }
+
+    @Test
+    void hoveringACardHighlightsItAndClickingPicksIt() {
+        InputHandler input = new InputHandler();
+        GameWorld world = worldAtUpgradeChoice(input);
+        double cardY = CardLayout.TOP + CardLayout.HEIGHT / 2;
+
+        input.moveMouse(cardCenterX(2), cardY);
+        world.update(GameLoop.STEP, input);
+        assertEquals(2, world.getSelectedChoice());
+        assertEquals(GameState.CHOOSE_UPGRADE, world.getState());
+
+        Upgrade second = world.getUpgradeChoices().get(1);
+        input.click(cardCenterX(1), cardY);
+        world.update(GameLoop.STEP, input);
+        assertEquals(2, world.getStage());
+        assertEquals(List.of(second.getName()), world.getStats().getUpgradesTaken());
+    }
+
+    @Test
+    void clickingOutsideTheCardsPicksNothing() {
+        InputHandler input = new InputHandler();
+        GameWorld world = worldAtUpgradeChoice(input);
+        input.click(cardCenterX(0), CardLayout.TOP - 20);
+        world.update(GameLoop.STEP, input);
+        input.click(CardLayout.left(1, 3) - CardLayout.GAP / 2, CardLayout.TOP + 10); // between two cards
+        world.update(GameLoop.STEP, input);
+        assertEquals(GameState.CHOOSE_UPGRADE, world.getState());
+        assertEquals(0, world.getSelectedChoice());
+    }
+
     @Test
     void paddleUpgradesMakeThePaddleWiderAndFaster() {
         new WidePaddle().apply(stats);
