@@ -24,7 +24,7 @@ public class GameWorld {
     public enum State { MENU, PLAYING, PAUSED, CHOOSE_UPGRADE, GAME_OVER, VICTORY }
 
     // Short-lived feedback where something happened: "+50" rising from a broken brick
-    // (with an explosion), or "LASER!" over the paddle.
+    // (with an explosion), or "BIG BALL!" over the paddle.
     public record Popup(String text, double x, double y, double age, boolean explosion) {
     }
 
@@ -33,8 +33,8 @@ public class GameWorld {
     public static final double HUD_HEIGHT = 40;
     public static final double EXPLOSION_SECONDS = 0.36;
     public static final double POPUP_SECONDS = 0.8;
-    // Bonus bricks always drop the laser capsule; other bricks sometimes do.
-    public static final double LASER_DROP_CHANCE = 0.06;
+    // Bonus bricks always drop the Big Ball capsule; other bricks sometimes do.
+    public static final double CAPSULE_DROP_CHANCE = 0.06;
 
     // Upgrade cards, centered in a row.
     public static final double CARD_WIDTH = 220;
@@ -47,8 +47,7 @@ public class GameWorld {
 
     private final List<String[]> stages;
     private final Random random;
-    private final Laser laser = new Laser();
-    private final List<Laser.Capsule> capsules = new ArrayList<>();
+    private final List<Capsule> capsules = new ArrayList<>();
     private final List<Popup> popups = new ArrayList<>();
     private Ball ball = new Ball();
     private List<Brick> bricks = new ArrayList<>();
@@ -198,26 +197,22 @@ public class GameWorld {
             }
         }
 
-        // Hold SPACE to fire while the laser is active (once the ball is in play).
-        boolean firing = ball.isLaunched() && input.isHeld(KeyCode.SPACE);
-        boolean wasActive = laser.isActive();
-        laser.update(dt, paddle, firing, bricks).forEach(this::onBrickHit);
-        if (wasActive && !laser.isActive()) {
-            logger.info("Laser wore off");
-        }
-
         capsules.removeIf(capsule -> {
             capsule.fall(dt);
             if (capsule.intersects(paddle)) {
-                laser.activate();
-                popups.add(new Popup("LASER!", paddle.getCenterX(), paddle.getY() - 20, 0, false));
-                logger.info("Player caught the laser power-up ({}s)", (int) Laser.DURATION);
+                ball.grow();
+                popups.add(new Popup("BIG BALL!", paddle.getCenterX(), paddle.getY() - 20, 0, false));
+                logger.info("Player caught the Big Ball power-up ({}s)", (int) Ball.BIG_SECONDS);
                 return true;
             }
             return capsule.getY() > HEIGHT;
         });
 
+        boolean wasBig = ball.isBig();
         ball.tick(dt);
+        if (wasBig && !ball.isBig()) {
+            logger.info("Big Ball wore off");
+        }
         bricks.forEach(brick -> brick.tick(dt));
         popups.replaceAll(p -> new Popup(p.text(), p.x(), p.y(), p.age() + dt, p.explosion()));
         popups.removeIf(p -> p.age() >= POPUP_SECONDS);
@@ -233,9 +228,9 @@ public class GameWorld {
             int awarded = stats.addBrickPoints(brick.getPoints());
             popups.add(new Popup("+" + awarded, brick.getCenterX(), brick.getCenterY(), 0, true));
             logger.info("{} brick destroyed: +{} (combo x{}, score {})", brick.getType(), awarded, stats.combo, getScore());
-            if (brick.getType() == Brick.Type.BONUS || random.nextDouble() < LASER_DROP_CHANCE) {
-                capsules.add(new Laser.Capsule(brick.getCenterX(), brick.getCenterY()));
-                logger.debug("Laser power-up dropped at x={}", Math.round(brick.getCenterX()));
+            if (brick.getType() == Brick.Type.BONUS || random.nextDouble() < CAPSULE_DROP_CHANCE) {
+                capsules.add(new Capsule(brick.getCenterX(), brick.getCenterY()));
+                logger.debug("Big Ball power-up dropped at x={}", Math.round(brick.getCenterX()));
             }
         } else if (brick.isBreakable()) {
             logger.debug("{} brick hit, {} hits left", brick.getType(), brick.getHitPoints());
@@ -248,7 +243,6 @@ public class GameWorld {
         stats.lives--;
         stats.resetCombo();
         resetBalls();
-        laser.reset();
         capsules.clear();
         logger.warn("Ball lost, {} lives left", stats.lives);
         if (stats.lives <= 0) {
@@ -259,7 +253,6 @@ public class GameWorld {
 
     private void onStageCleared() {
         resetBalls();
-        laser.reset();
         stats.resetCombo();
         logger.info("Stage {} cleared with score {}", stage, getScore());
         if (stage == stages.size()) {
@@ -309,7 +302,6 @@ public class GameWorld {
         paddle.applyStats(stats);
         bricks = Brick.fromRows(stages.get(stage - 1));
         resetBalls();
-        laser.reset();
         capsules.clear();
         popups.clear();
         logger.info("Stage {} loaded with {} bricks", stage, bricks.size());
@@ -367,11 +359,7 @@ public class GameWorld {
         return selectedChoice;
     }
 
-    public Laser getLaser() {
-        return laser;
-    }
-
-    public List<Laser.Capsule> getCapsules() {
+    public List<Capsule> getCapsules() {
         return Collections.unmodifiableList(capsules);
     }
 

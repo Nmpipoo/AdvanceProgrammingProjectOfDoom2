@@ -55,7 +55,6 @@ public class Sprites {
 
     // Paddle sheet: 32x8 paddle frames stacked in columns, 6 frames each.
     private final Animation<Rectangle2D> paddleMove = paddleColumn(32);
-    private final Animation<Rectangle2D> laserPaddleMove = paddleColumn(144);
     private final Animation<Rectangle2D> explosion;
     // Ball squash on bounce, as {width scale, height scale} along the bounce direction.
     private final Animation<double[]> ballBounce = new Animation<>(List.of(
@@ -65,7 +64,6 @@ public class Sprites {
             new double[]{1.0, 1.0}), 0.04, false);
 
     private final Rectangle2D ball = new Rectangle2D(0, 40, 5, 4);
-    private final Rectangle2D laserBolt = new Rectangle2D(165, 48, 3, 8);
 
     // Throws GameException if a sheet is missing or unreadable.
     public Sprites() {
@@ -141,10 +139,6 @@ public class Sprites {
         return paddleMove;
     }
 
-    public Animation<Rectangle2D> getLaserPaddleMove() {
-        return laserPaddleMove;
-    }
-
     public Animation<Rectangle2D> getExplosion() {
         return explosion;
     }
@@ -155,9 +149,5 @@ public class Sprites {
 
     public Rectangle2D getBall() {
         return ball;
-    }
-
-    public Rectangle2D getLaserBolt() {
-        return laserBolt;
     }
 }

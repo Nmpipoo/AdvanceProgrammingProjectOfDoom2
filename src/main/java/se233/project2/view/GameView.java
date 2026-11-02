@@ -12,8 +12,8 @@ import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextAlignment;
 import se233.project2.model.Ball;
+import se233.project2.model.Capsule;
 import se233.project2.model.GameWorld;
-import se233.project2.model.Laser;
 import se233.project2.model.Paddle;
 import se233.project2.model.Brick;
 import se233.project2.model.Upgrade;
@@ -36,7 +36,7 @@ public class GameView extends Pane {
     private static final String FONT = Font.getDefault().getFamily();
     private static final double BOX_PADDING = 24;
     private static final Color BACKGROUND_DIM = Color.color(0.05, 0.06, 0.1, 0.6);
-    private static final Color LASER_CAPSULE = Color.web("#ff5a4f");
+    private static final Color CAPSULE_COLOR = Color.web("#ff5a4f");
     // Sprites are pixel art, drawn at 3x their size on the sheet.
     private static final double SCALE = 3;
 
@@ -113,14 +113,8 @@ public class GameView extends Pane {
             }
         }
 
-        for (Laser.Capsule capsule : world.getCapsules()) {
+        for (Capsule capsule : world.getCapsules()) {
             drawCapsule(capsule);
-        }
-
-        Image paddleSheet = sprites.getPaddleSheet();
-        Rectangle2D bolt = sprites.getLaserBolt();
-        for (Laser.Bolt laserBolt : world.getLaser().getBolts()) {
-            drawCentered(paddleSheet, bolt, laserBolt.getCenterX(), laserBolt.getCenterY(), SCALE, SCALE);
         }
 
         drawPaddle(world);
@@ -155,22 +149,21 @@ public class GameView extends Pane {
         gc.fillRect(x, y + h - 3, w, 3);
     }
 
-    private void drawCapsule(Laser.Capsule capsule) {
-        gc.setFill(LASER_CAPSULE);
+    private void drawCapsule(Capsule capsule) {
+        gc.setFill(CAPSULE_COLOR);
         gc.fillRoundRect(capsule.getX(), capsule.getY(), capsule.getWidth(), capsule.getHeight(), 14, 14);
         gc.setFill(Color.WHITE);
         gc.setTextAlign(TextAlignment.CENTER);
         gc.setTextBaseline(VPos.CENTER);
-        gc.setFont(Font.font(FONT, FontWeight.BOLD, 14));
-        gc.fillText("L", capsule.getCenterX(), capsule.getCenterY());
+        gc.setFont(Font.font(FONT, FontWeight.BOLD, 11));
+        gc.fillText("BIG", capsule.getCenterX(), capsule.getCenterY());
     }
 
     // The paddle sprite is 32x8: its 8 px end caps keep their shape and the middle stretches,
     // so any paddle width (after Wide Paddle upgrades) still looks right.
     private void drawPaddle(GameWorld world) {
         Paddle paddle = world.getPaddle();
-        Sprites.Animation<Rectangle2D> move = world.getLaser().isActive() ? sprites.getLaserPaddleMove() : sprites.getPaddleMove();
-        Rectangle2D frame = move.frameAt(paddle.getMoveTime());
+        Rectangle2D frame = sprites.getPaddleMove().frameAt(paddle.getMoveTime());
         Image sheet = sprites.getPaddleSheet();
         double cap = 8 * SCALE;
         double height = frame.getHeight() * SCALE;
@@ -183,15 +176,17 @@ public class GameView extends Pane {
     }
 
     // The ball squashes for a moment after each bounce, flattened along the direction it hit.
+    // The sprite grows with the ball while Big Ball is active.
     private void drawBall(Ball ball) {
         double[] squash = sprites.getBallBounce().frameAt(ball.getSinceBounce());
         double scaleX = ball.isBouncedVertically() ? squash[0] : squash[1];
         double scaleY = ball.isBouncedVertically() ? squash[1] : squash[0];
+        double size = SCALE * ball.getWidth() / (Ball.RADIUS * 2);
         drawCentered(sprites.getPaddleSheet(), sprites.getBall(), ball.getCenterX(), ball.getCenterY(),
-                SCALE * scaleX, SCALE * scaleY);
+                size * scaleX, size * scaleY);
     }
 
-    // Explosions where bricks broke, and "+points" / "LASER!" text that rises and fades.
+    // Explosions where bricks broke, and "+points" / "BIG BALL!" text that rises and fades.
     private void drawPopups(List<GameWorld.Popup> popups) {
         for (GameWorld.Popup popup : popups) {
             if (popup.explosion() && popup.age() < GameWorld.EXPLOSION_SECONDS) {
@@ -246,9 +241,9 @@ public class GameView extends Pane {
         }
         gc.setTextAlign(TextAlignment.CENTER);
         gc.fillText("STAGE " + world.getStage() + "/" + world.getStageCount(), WIDTH / 2, HUD_HEIGHT / 2);
-        Laser laser = world.getLaser();
-        if (laser.isActive()) {
-            gc.fillText("LASER " + (int) Math.ceil(laser.getTimeLeft()) + "s", 590, HUD_HEIGHT / 2);
+        Ball ball = world.getBall();
+        if (ball.isBig()) {
+            gc.fillText("BIG BALL " + (int) Math.ceil(ball.getBigTimeLeft()) + "s", 590, HUD_HEIGHT / 2);
         }
         gc.setTextAlign(TextAlignment.RIGHT);
         gc.fillText("LIVES " + world.getLives(), WIDTH - 16, HUD_HEIGHT / 2);

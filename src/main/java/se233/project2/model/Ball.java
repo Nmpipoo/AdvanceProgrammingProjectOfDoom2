@@ -8,6 +8,9 @@ import java.util.List;
 public class Ball extends GameObject {
 
     public static final double RADIUS = 7;
+    // The Big Ball power-up makes the ball BIG_SCALE times as wide for BIG_SECONDS.
+    public static final double BIG_SCALE = 2;
+    public static final double BIG_SECONDS = 10;
     public static final double DEFAULT_SPEED = 360;
     // Launch direction, measured from straight up towards the right.
     public static final double LAUNCH_ANGLE = Math.toRadians(30);
@@ -24,14 +27,28 @@ public class Ball extends GameObject {
     // Time since the last bounce; drives the ball's squash animation.
     private double sinceBounce = Double.MAX_VALUE;
     private boolean bouncedVertically;
+    private double bigTimeLeft;
 
     public Ball() {
         super(0, 0, RADIUS * 2, RADIUS * 2);
     }
 
     public void followPaddle(Paddle paddle) {
-        x = paddle.getCenterX() - RADIUS;
+        x = paddle.getCenterX() - width / 2;
         y = paddle.getY() - height - 1;
+    }
+
+    // Catching the Big Ball power-up: grow around the center, or restart the timer if already big.
+    public void grow() {
+        bigTimeLeft = BIG_SECONDS;
+        resize(RADIUS * 2 * BIG_SCALE);
+    }
+
+    private void resize(double size) {
+        x = getCenterX() - size / 2;
+        y = getCenterY() - size / 2;
+        width = size;
+        height = size;
     }
 
     public void launch() {
@@ -128,6 +145,20 @@ public class Ball extends GameObject {
 
     public void tick(double dt) {
         sinceBounce += dt;
+        if (bigTimeLeft > 0) {
+            bigTimeLeft = Math.max(0, bigTimeLeft - dt);
+            if (bigTimeLeft == 0) {
+                resize(RADIUS * 2);
+            }
+        }
+    }
+
+    public boolean isBig() {
+        return bigTimeLeft > 0;
+    }
+
+    public double getBigTimeLeft() {
+        return bigTimeLeft;
     }
 
     public double getSinceBounce() {

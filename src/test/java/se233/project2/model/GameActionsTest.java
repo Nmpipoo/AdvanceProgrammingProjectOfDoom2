@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-// Rubric: unit tests for game actions (paddle, ball, bricks, laser, pause, stages).
+// Rubric: unit tests for game actions (paddle, ball, bricks, Big Ball, pause, stages).
 class GameActionsTest {
 
     private final InputHandler input = new InputHandler();
@@ -112,34 +112,41 @@ class GameActionsTest {
     }
 
     @Test
-    void laserFiresAPairOfBoltsThatDamageBricks() {
-        Laser laser = new Laser();
-        laser.update(GameLoop.STEP, paddle, true, List.of());
-        assertTrue(laser.getBolts().isEmpty(), "no bolts before the power-up is caught");
-
-        laser.activate();
-        Brick brick = new Brick(Brick.Type.STRONG, paddle.getX() + Laser.CANNON_INSET - Brick.WIDTH / 2, 200);
-        List<Brick> hits = List.of();
-        for (int i = 0; i < 120 && hits.isEmpty(); i++) {
-            hits = laser.update(GameLoop.STEP, paddle, i == 0, List.of(brick));
-            if (i == 0) {
-                assertEquals(2, laser.getBolts().size());
-            }
+    void catchingTheCapsuleFromABonusBrickMakesTheBallBig() {
+        world = new GameWorld(List.<String[]>of(new String[]{"BBBBBBBBBBBB"}));
+        tap(KeyCode.ENTER);
+        tap(KeyCode.SPACE);
+        for (int i = 0; i < 600 && world.getCapsules().isEmpty(); i++) {
+            world.update(GameLoop.STEP, input);
         }
-        assertEquals(List.of(brick), hits);
-        assertEquals(2, brick.getHitPoints());
+        assertEquals(1, world.getCapsules().size(), "a broken bonus brick always drops a capsule");
+        assertFalse(world.getBall().isBig());
+
+        // Put the capsule on the paddle instead of waiting for it to fall.
+        Capsule capsule = world.getCapsules().get(0);
+        capsule.x = world.getPaddle().getCenterX() - capsule.getWidth() / 2;
+        capsule.y = world.getPaddle().getY();
+        world.update(GameLoop.STEP, input);
+        assertTrue(world.getCapsules().isEmpty());
+        assertTrue(world.getBall().isBig());
     }
 
     @Test
-    void laserWearsOffAfterItsDuration() {
-        Laser laser = new Laser();
-        laser.activate();
-        for (double t = 0; t < Laser.DURATION + 0.1; t += GameLoop.STEP) {
-            laser.update(GameLoop.STEP, paddle, false, List.of());
+    void bigBallGrowsAroundItsCenterThenWearsOff() {
+        ball.x = 300;
+        ball.y = 300;
+        double centerX = ball.getCenterX();
+        double centerY = ball.getCenterY();
+        ball.grow();
+        assertEquals(Ball.RADIUS * 2 * Ball.BIG_SCALE, ball.getWidth(), 1e-9);
+        assertEquals(centerX, ball.getCenterX(), 1e-9);
+        assertEquals(centerY, ball.getCenterY(), 1e-9);
+
+        for (double t = 0; t < Ball.BIG_SECONDS + 0.1; t += GameLoop.STEP) {
+            ball.tick(GameLoop.STEP);
         }
-        assertFalse(laser.isActive());
-        laser.update(GameLoop.STEP, paddle, true, List.of());
-        assertTrue(laser.getBolts().isEmpty());
+        assertFalse(ball.isBig());
+        assertEquals(Ball.RADIUS * 2, ball.getWidth(), 1e-9);
     }
 
     @Test
