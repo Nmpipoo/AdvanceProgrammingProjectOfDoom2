@@ -1,11 +1,11 @@
 package se233.project2;
 
+import javafx.animation.AnimationTimer;
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import se233.project2.controller.DrawingLoop;
 import se233.project2.controller.GameLoop;
 import se233.project2.controller.InputHandler;
 import se233.project2.exception.ExceptionHandler;
@@ -18,12 +18,11 @@ public class App extends Application {
     private static final Logger logger = LogManager.getLogger(App.class);
 
     private GameLoop gameLoop;
-    private DrawingLoop drawingLoop;
+    private AnimationTimer drawingLoop;
 
     @Override
     public void start(Stage stage) {
         ExceptionHandler.install();
-
         GameWorld world;
         GameView view;
         try {
@@ -42,8 +41,26 @@ public class App extends Application {
         stage.show();
         input.attach(scene);
 
+        // Game logic runs on its own thread; drawing happens on the JavaFX thread every frame.
         gameLoop = new GameLoop(world, input);
-        drawingLoop = new DrawingLoop(world, view, gameLoop);
+        drawingLoop = new AnimationTimer() {
+            private long secondStart;
+            private int frames;
+            private int framesPerSecond;
+
+            @Override
+            public void handle(long now) {
+                frames++;
+                if (now - secondStart >= 1_000_000_000L) {
+                    framesPerSecond = frames;
+                    frames = 0;
+                    secondStart = now;
+                }
+                synchronized (world) {
+                    view.render(world, framesPerSecond, gameLoop.getUpdatesPerSecond());
+                }
+            }
+        };
         gameLoop.start();
         drawingLoop.start();
         logger.info("Brick Rogue window opened");

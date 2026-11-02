@@ -5,11 +5,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import se233.project2.controller.GameLoop;
 import se233.project2.controller.InputHandler;
-import se233.project2.model.brick.Brick;
-import se233.project2.model.brick.NormalBrick;
-import se233.project2.model.brick.StrongBrick;
-import se233.project2.model.brick.UnbreakableBrick;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -21,7 +16,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class GameActionsTest {
 
     private final InputHandler input = new InputHandler();
-    private final Physics physics = new Physics();
     private final Paddle paddle = new Paddle();
     private final Ball ball = new Ball();
     private GameWorld world;
@@ -44,7 +38,7 @@ class GameActionsTest {
         ball.x = brick.getCenterX() - Ball.RADIUS - 2;
         ball.y = brick.getY() + brick.getHeight() + 5;
         for (int i = 0; i < 600; i++) {
-            if (!physics.step(ball, paddle, bricks, GameLoop.STEP).bricksHit().isEmpty()) {
+            if (!ball.step(paddle, bricks, GameLoop.STEP).bricks().isEmpty()) {
                 return;
             }
         }
@@ -77,8 +71,7 @@ class GameActionsTest {
     void ballBouncesOffTheWalls() {
         ball.launch();
         // Moving up and right: push it past the right wall and the ceiling.
-        ball.move(100);
-        ball.bounceOffWalls(0, GameWorld.HUD_HEIGHT, GameWorld.WIDTH);
+        ball.step(paddle, List.of(), 100);
         assertTrue(ball.getVx() < 0);
         assertTrue(ball.getVy() > 0);
     }
@@ -97,7 +90,7 @@ class GameActionsTest {
 
     @Test
     void ballBreaksANormalBrickAndBouncesBack() {
-        Brick brick = new NormalBrick(300, 200);
+        Brick brick = new Brick(Brick.Type.NORMAL, 300, 200);
         shootBallInto(brick, new ArrayList<>(List.of(brick)));
         assertTrue(brick.isDestroyed());
         assertTrue(ball.getVy() > 0);
@@ -105,13 +98,13 @@ class GameActionsTest {
 
     @Test
     void strongBricksTakeThreeHitsAndUnbreakableBricksNeverBreak() {
-        Brick strong = new StrongBrick(0, 0);
+        Brick strong = new Brick(Brick.Type.STRONG, 0, 0);
         assertFalse(strong.hit());
         assertFalse(strong.hit());
         assertTrue(strong.hit());
         assertTrue(strong.isDestroyed());
 
-        Brick wall = new UnbreakableBrick(0, 0);
+        Brick wall = new Brick(Brick.Type.UNBREAKABLE, 0, 0);
         for (int i = 0; i < 10; i++) {
             wall.hit();
         }
@@ -125,7 +118,7 @@ class GameActionsTest {
         assertTrue(laser.getBolts().isEmpty(), "no bolts before the power-up is caught");
 
         laser.activate();
-        Brick brick = new StrongBrick(paddle.getX() + Laser.CANNON_INSET - Brick.WIDTH / 2, 200);
+        Brick brick = new Brick(Brick.Type.STRONG, paddle.getX() + Laser.CANNON_INSET - Brick.WIDTH / 2, 200);
         List<Brick> hits = List.of();
         for (int i = 0; i < 120 && hits.isEmpty(); i++) {
             hits = laser.update(GameLoop.STEP, paddle, i == 0, List.of(brick));
@@ -152,21 +145,22 @@ class GameActionsTest {
     @Test
     void pauseTogglesAndQuitReturnsToTheMenu() {
         tap(KeyCode.P);
-        assertEquals(GameState.PAUSED, world.getState());
+        assertEquals(GameWorld.State.PAUSED, world.getState());
         tap(KeyCode.P);
-        assertEquals(GameState.PLAYING, world.getState());
+        assertEquals(GameWorld.State.PLAYING, world.getState());
         tap(KeyCode.P);
         tap(KeyCode.Q);
-        assertEquals(GameState.MENU, world.getState());
+        assertEquals(GameWorld.State.MENU, world.getState());
     }
 
     @Test
     void clearingTheLastStageWinsTheGame() {
         breakAllBricks();
-        tap(KeyCode.ENTER); // take an upgrade
+        input.click(GameWorld.cardLeft(0, 3) + 10, GameWorld.CARD_TOP + 10); // take an upgrade
+        world.update(GameLoop.STEP, input);
         assertEquals(2, world.getStage());
         breakAllBricks();   // the unbreakable brick doesn't need clearing
-        assertEquals(GameState.VICTORY, world.getState());
+        assertEquals(GameWorld.State.VICTORY, world.getState());
     }
 
     private void breakAllBricks() {

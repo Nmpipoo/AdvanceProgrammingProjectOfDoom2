@@ -12,17 +12,11 @@ import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextAlignment;
 import se233.project2.model.Ball;
-import se233.project2.model.CardLayout;
-import se233.project2.model.Effects;
-import se233.project2.model.GameState;
 import se233.project2.model.GameWorld;
 import se233.project2.model.Laser;
-import se233.project2.model.LaserBolt;
 import se233.project2.model.Paddle;
-import se233.project2.model.PowerUp;
-import se233.project2.model.brick.Brick;
-import se233.project2.model.brick.BrickType;
-import se233.project2.model.upgrade.Upgrade;
+import se233.project2.model.Brick;
+import se233.project2.model.Upgrade;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -102,12 +96,9 @@ public class GameView extends Pane {
         gc.setTextBaseline(VPos.CENTER);
         gc.setFill(INK);
         gc.setFont(font(64));
-        gc.fillText("GAME", WIDTH / 2, HEIGHT / 2 - 80);
+        gc.fillText("Arkanoid", WIDTH / 2, HEIGHT / 2 - 80);
         gc.setFont(font(22));
         gc.fillText("Press ENTER to start", WIDTH / 2, HEIGHT / 2 + 10);
-        gc.setFont(font(16));
-        gc.fillText("A/D or arrow keys: move   SPACE: launch   P: pause", WIDTH / 2, HEIGHT / 2 + 60);
-        gc.fillText("Catch the red L capsule, then hold SPACE to fire lasers", WIDTH / 2, HEIGHT / 2 + 85);
     }
 
     private void drawPlayfield(GameWorld world) {
@@ -124,13 +115,13 @@ public class GameView extends Pane {
             }
         }
 
-        for (PowerUp powerUp : world.getPowerUps()) {
-            drawPowerUp(powerUp);
+        for (Laser.Capsule capsule : world.getCapsules()) {
+            drawCapsule(capsule);
         }
 
         Image paddleSheet = sprites.getPaddleSheet();
         Rectangle2D bolt = sprites.getLaserBolt();
-        for (LaserBolt laserBolt : world.getLaser().getBolts()) {
+        for (Laser.Bolt laserBolt : world.getLaser().getBolts()) {
             drawCentered(paddleSheet, bolt, laserBolt.getCenterX(), laserBolt.getCenterY(), SCALE, SCALE);
         }
 
@@ -140,11 +131,7 @@ public class GameView extends Pane {
             drawBall(ball);
         }
 
-        drawEffects(world.getEffects());
-
-        if (!world.getBall().isLaunched() && world.getState() == GameState.PLAYING) {
-            drawMessage(WIDTH / 2, Paddle.Y - 60, new String[]{"SPACE to launch"}, new double[]{16});
-        }
+        drawPopups(world.getPopups());
     }
 
     private void drawBrick(Brick brick) {
@@ -172,21 +159,21 @@ public class GameView extends Pane {
         gc.fillRect(x, y + h - 3, w, 3);
     }
 
-    private void drawPowerUp(PowerUp powerUp) {
+    private void drawCapsule(Laser.Capsule capsule) {
         gc.setFill(LASER_CAPSULE);
-        gc.fillRoundRect(powerUp.getX(), powerUp.getY(), powerUp.getWidth(), powerUp.getHeight(), 14, 14);
+        gc.fillRoundRect(capsule.getX(), capsule.getY(), capsule.getWidth(), capsule.getHeight(), 14, 14);
         gc.setFill(Color.WHITE);
         gc.setTextAlign(TextAlignment.CENTER);
         gc.setTextBaseline(VPos.CENTER);
         gc.setFont(Font.font(FONT, FontWeight.BOLD, 14));
-        gc.fillText("L", powerUp.getCenterX(), powerUp.getCenterY());
+        gc.fillText("L", capsule.getCenterX(), capsule.getCenterY());
     }
 
     // The paddle sprite is 32x8: its 8 px end caps keep their shape and the middle stretches,
     // so any paddle width (after Wide Paddle upgrades) still looks right.
     private void drawPaddle(GameWorld world) {
         Paddle paddle = world.getPaddle();
-        Animation<Rectangle2D> move = world.getLaser().isActive() ? sprites.getLaserPaddleMove() : sprites.getPaddleMove();
+        Sprites.Animation<Rectangle2D> move = world.getLaser().isActive() ? sprites.getLaserPaddleMove() : sprites.getPaddleMove();
         Rectangle2D frame = move.frameAt(paddle.getMoveTime());
         Image sheet = sprites.getPaddleSheet();
         double cap = 8 * SCALE;
@@ -213,24 +200,26 @@ public class GameView extends Pane {
                 SCALE * scaleX, SCALE * scaleY);
     }
 
-    private void drawEffects(Effects effects) {
-        Image enemySheet = sprites.getEnemySheet();
-        for (Effects.Explosion explosion : effects.getExplosions()) {
-            drawCentered(enemySheet, sprites.getExplosion().frameAt(explosion.age()),
-                    explosion.centerX(), explosion.centerY(), SCALE, SCALE);
+    // Explosions where bricks broke, and "+points" / "LASER!" text that rises and fades.
+    private void drawPopups(List<GameWorld.Popup> popups) {
+        for (GameWorld.Popup popup : popups) {
+            if (popup.explosion() && popup.age() < GameWorld.EXPLOSION_SECONDS) {
+                drawCentered(sprites.getEnemySheet(), sprites.getExplosion().frameAt(popup.age()),
+                        popup.x(), popup.y(), SCALE, SCALE);
+            }
         }
         gc.setTextAlign(TextAlignment.CENTER);
         gc.setTextBaseline(VPos.CENTER);
         gc.setFont(Font.font(FONT, FontWeight.BOLD, 16));
         // White with a dark outline so it reads on top of the explosion.
         gc.setLineWidth(3);
-        for (Effects.FloatingText text : effects.getTexts()) {
-            double alpha = 1 - text.age() / Effects.TEXT_SECONDS;
-            double y = text.centerY() - 22;
-            gc.setStroke(Color.color(0, 0, 0, 0.8 * alpha));
-            gc.strokeText(text.text(), text.centerX(), y);
-            gc.setFill(Color.color(1, 1, 1, alpha));
-            gc.fillText(text.text(), text.centerX(), y);
+        for (GameWorld.Popup popup : popups) {
+            double progress = popup.age() / GameWorld.POPUP_SECONDS;
+            double y = popup.y() - 22 - 40 * progress;
+            gc.setStroke(Color.color(0, 0, 0, 0.8 * (1 - progress)));
+            gc.strokeText(popup.text(), popup.x(), y);
+            gc.setFill(Color.color(1, 1, 1, 1 - progress));
+            gc.fillText(popup.text(), popup.x(), y);
         }
     }
 
@@ -241,7 +230,7 @@ public class GameView extends Pane {
                 centerX - w / 2, centerY - h / 2, w, h);
     }
 
-    private static Color brickColor(BrickType type) {
+    private static Color brickColor(Brick.Type type) {
         return switch (type) {
             case NORMAL -> Color.web("#4fc3f7");
             case STRONG -> Color.web("#9575cd");
@@ -274,18 +263,13 @@ public class GameView extends Pane {
         gc.fillText("LIVES " + world.getLives(), WIDTH - 16, HUD_HEIGHT / 2);
     }
 
-    // Short message in the middle of the screen ("STAGE 2", "LIFE LOST") that fades out.
+    // Short message in the middle of the screen ("LIFE LOST") that fades out.
     private void drawBanner(GameWorld world) {
         if (world.getBannerTime() <= 0) {
             return;
         }
         gc.setGlobalAlpha(Math.min(1, world.getBannerTime() / 0.5));
-        if (world.getBannerSubtitle().isEmpty()) {
-            drawMessage(WIDTH / 2, HEIGHT / 2 + 40, new String[]{world.getBanner()}, new double[]{40});
-        } else {
-            drawMessage(WIDTH / 2, HEIGHT / 2 + 55, new String[]{world.getBanner(), world.getBannerSubtitle()},
-                    new double[]{40, 22});
-        }
+        drawMessage(WIDTH / 2, HEIGHT / 2 + 40, new String[]{world.getBanner()}, new double[]{40});
         gc.setGlobalAlpha(1);
     }
 
@@ -337,30 +321,27 @@ public class GameView extends Pane {
         List<Upgrade> choices = world.getUpgradeChoices();
         gc.setStroke(INK);
         for (int i = 0; i < choices.size(); i++) {
-            double x = CardLayout.left(i, choices.size());
-            // No colour, so the highlighted card gets a thicker frame.
+            double x = GameWorld.cardLeft(i, choices.size());
+            // No colour, so the card under the mouse gets a thicker frame.
             boolean selected = i == world.getSelectedChoice();
             gc.setLineWidth(selected ? 3 : 1);
-            gc.strokeRect(x + 0.5, CardLayout.TOP + 0.5, CardLayout.WIDTH, CardLayout.HEIGHT);
+            gc.strokeRect(x + 0.5, GameWorld.CARD_TOP + 0.5, GameWorld.CARD_WIDTH, GameWorld.CARD_HEIGHT);
 
-            double centerX = x + CardLayout.WIDTH / 2;
-            gc.setFont(font(16));
-            gc.fillText("[" + (i + 1) + "]", centerX, CardLayout.TOP + 24);
+            double centerX = x + GameWorld.CARD_WIDTH / 2;
             gc.setFont(font(20));
-            gc.fillText(choices.get(i).getName(), centerX, CardLayout.TOP + 58);
+            gc.fillText(choices.get(i).getName(), centerX, GameWorld.CARD_TOP + 50);
             gc.setFont(font(15));
             List<String> lines = wrap(choices.get(i).getDescription(), 22);
             for (int line = 0; line < lines.size(); line++) {
-                gc.fillText(lines.get(line), centerX, CardLayout.TOP + 95 + line * 20);
+                gc.fillText(lines.get(line), centerX, GameWorld.CARD_TOP + 90 + line * 20);
             }
         }
         gc.setLineWidth(1);
 
         gc.setFont(font(16));
-        gc.fillText("Click a card, or press 1-" + choices.size() + ", or LEFT/RIGHT then ENTER", WIDTH / 2, CardLayout.TOP + CardLayout.HEIGHT + 45);
         List<String> taken = world.getStats().getUpgradesTaken();
         if (!taken.isEmpty()) {
-            gc.fillText("Your upgrades: " + summarize(taken), WIDTH / 2, CardLayout.TOP + CardLayout.HEIGHT + 85);
+            gc.fillText("Your upgrades: " + summarize(taken), WIDTH / 2, GameWorld.CARD_TOP + GameWorld.CARD_HEIGHT + 45);
         }
     }
 

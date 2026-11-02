@@ -44,7 +44,7 @@ class LivesTest {
     void missingTheBallCostsALifeAndPutsItBackOnThePaddle() {
         dropBall();
         assertEquals(2, world.getLives());
-        assertEquals(GameState.PLAYING, world.getState());
+        assertEquals(GameWorld.State.PLAYING, world.getState());
         assertFalse(world.getBall().isLaunched());
         assertEquals("LIFE LOST", world.getBanner());
     }
@@ -55,7 +55,7 @@ class LivesTest {
             dropBall();
         }
         assertEquals(0, world.getLives());
-        assertEquals(GameState.GAME_OVER, world.getState());
+        assertEquals(GameWorld.State.GAME_OVER, world.getState());
     }
 
     @Test
@@ -64,14 +64,14 @@ class LivesTest {
             dropBall();
         }
         tap(KeyCode.ENTER);
-        assertEquals(GameState.PLAYING, world.getState());
+        assertEquals(GameWorld.State.PLAYING, world.getState());
         assertEquals(3, world.getLives());
         assertEquals(0, world.getScore());
     }
 
     @Test
     void withExtraBallsOnlyLosingTheLastBallCostsALife() {
-        world.getStats().setExtraBalls(1);
+        world.getStats().extraBalls = 1;
         tap(KeyCode.SPACE);
         assertEquals(2, world.getBalls().size());
 
@@ -90,8 +90,9 @@ class LivesTest {
         world.getBricks().forEach(brick -> brick.hit());
         world.update(GameLoop.STEP, input);
         // Pick an upgrade that isn't Extra Life, so the count stays the same.
-        int pick = world.getUpgradeChoices().get(0).getName().equals("Extra Life") ? 2 : 1;
-        tap(KeyCode.valueOf("DIGIT" + pick));
+        int pick = world.getUpgradeChoices().get(0) == Upgrade.EXTRA_LIFE ? 1 : 0;
+        input.click(GameWorld.cardLeft(pick, 3) + 10, GameWorld.CARD_TOP + 10);
+        world.update(GameLoop.STEP, input);
         assertEquals(2, world.getStage());
         assertEquals(2, world.getLives());
     }

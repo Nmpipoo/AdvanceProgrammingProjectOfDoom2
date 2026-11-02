@@ -34,8 +34,8 @@ public class Paddle extends GameObject {
     // Upgrades change size and speed; resizing keeps the paddle centered where it was.
     public void applyStats(PlayerStats stats) {
         double center = getCenterX();
-        width = stats.getPaddleWidth();
-        speed = stats.getPaddleSpeed();
+        width = stats.paddleWidth;
+        speed = stats.paddleSpeed;
         x = Math.clamp(center - width / 2, 0, GameWorld.WIDTH - width);
     }
 
